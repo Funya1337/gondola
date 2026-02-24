@@ -1,2 +1,17 @@
+# IDE
+.idea/
+.vscode/
+
+# Build directories
 /lib/bin/
 /examples/sum-service/bin/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Env files
+.env
