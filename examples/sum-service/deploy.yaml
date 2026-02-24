@@ -1,0 +1,33 @@
+# go-deploy configuration
+
+project:
+  name: "myapp"
+
+build:
+  entry: "."
+  output: "bin/myapp"
+  goos: "linux"
+  goarch: "amd64"
+  ldflags: "-s -w"
+  extra_env:
+    - "CGO_ENABLED=0"
+
+test:
+  commands:
+    - "go test ./..."
+  skip: false
+
+deploy:
+  host: "your.host.com"
+  port: 22
+  user: "youruser"
+  key_path: "~/.ssh/your-ssh-private-key"
+  remote_path: "/opt/myapp/myapp"
+  service:
+    name: "myapp"
+    description: "MyApp Service"
+    restart: "on-failure"
+  pre_deploy: []
+  post_deploy:
+    - "chmod +x /opt/myapp/myapp"
+    - "sudo systemctl start myapp"
