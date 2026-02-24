@@ -6,7 +6,7 @@ project:
 build:
   entry: "."
   output: "bin/myapp"
-  goos: "windows"
+  goos: "linux"
   goarch: "amd64"
   ldflags: "-s -w"
   extra_env:
@@ -18,13 +18,16 @@ test:
   skip: false
 
 deploy:
-  host: ""
+  host: "your.host.com"
   port: 22
-  user: ""
-  key_path: "~/.ssh/id_rsa"
+  user: "youruser"
+  key_path: "~/.ssh/your-ssh-private-key"
   remote_path: "/opt/myapp/myapp"
-  pre_deploy:
-    - "systemctl stop myapp"
+  service:
+    name: "myapp"
+    description: "MyApp Service"
+    restart: "on-failure"
+  pre_deploy: []
   post_deploy:
     - "chmod +x /opt/myapp/myapp"
-    - "systemctl start myapp"
+    - "sudo systemctl start myapp"

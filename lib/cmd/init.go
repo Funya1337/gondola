@@ -32,11 +32,15 @@ deploy:
   user: ""
   key_path: "~/.ssh/id_rsa"
   remote_path: "/opt/myapp/myapp"
+  service:
+    name: "myapp"
+    description: "MyApp Service"
+    restart: "on-failure"
   pre_deploy:
-    - "systemctl stop myapp"
+    - "sudo systemctl stop myapp"
   post_deploy:
     - "chmod +x /opt/myapp/myapp"
-    - "systemctl start myapp"
+    - "sudo systemctl start myapp"
 `
 
 var forceOverwrite bool

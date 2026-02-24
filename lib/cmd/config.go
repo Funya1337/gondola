@@ -10,6 +10,30 @@ import (
 type Config struct {
 	Project ProjectConfig `yaml:"project"`
 	Build   BuildConfig   `yaml:"build"`
+	Test    TestConfig    `yaml:"test"`
+	Deploy  DeployConfig  `yaml:"deploy"`
+}
+
+type ServiceConfig struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+	Restart     string `yaml:"restart"`
+}
+
+type DeployConfig struct {
+	Host       string        `yaml:"host"`
+	Port       int           `yaml:"port"`
+	User       string        `yaml:"user"`
+	KeyPath    string        `yaml:"key_path"`
+	RemotePath string        `yaml:"remote_path"`
+	Service    ServiceConfig `yaml:"service"`
+	PreDeploy  []string      `yaml:"pre_deploy"`
+	PostDeploy []string      `yaml:"post_deploy"`
+}
+
+type TestConfig struct {
+	Commands []string `yaml:"commands"`
+	Skip     bool     `yaml:"skip"`
 }
 
 type ProjectConfig struct {
