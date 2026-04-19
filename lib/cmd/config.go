@@ -21,14 +21,20 @@ type ServiceConfig struct {
 }
 
 type DeployConfig struct {
-	Host       string        `yaml:"host"`
-	Port       int           `yaml:"port"`
-	User       string        `yaml:"user"`
-	KeyPath    string        `yaml:"key_path"`
-	RemotePath string        `yaml:"remote_path"`
-	Service    ServiceConfig `yaml:"service"`
-	PreDeploy  []string      `yaml:"pre_deploy"`
-	PostDeploy []string      `yaml:"post_deploy"`
+	Host        string            `yaml:"host"`
+	Port        int               `yaml:"port"`
+	User        string            `yaml:"user"`
+	KeyPath     string            `yaml:"key_path"`
+	RemotePath  string            `yaml:"remote_path"`
+	Service     ServiceConfig     `yaml:"service"`
+	HealthCheck HealthCheckConfig `yaml:"health_check"`
+	PreDeploy   []string          `yaml:"pre_deploy"`
+	PostDeploy  []string          `yaml:"post_deploy"`
+}
+
+type HealthCheckConfig struct {
+	URL     string `yaml:"url"`
+	Timeout int    `yaml:"timeout"`
 }
 
 type TestConfig struct {

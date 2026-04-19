@@ -18,10 +18,10 @@ test:
   skip: false
 
 deploy:
-  host: "your.host.com"
+  host: "84.54.56.88"
   port: 22
-  user: "youruser"
-  key_path: "~/.ssh/your-ssh-private-key"
+  user: "funya7654"
+  key_path: "~/.ssh/id_ed25519"
   remote_path: "/opt/myapp/myapp"
   service:
     name: "myapp"

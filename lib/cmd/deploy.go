@@ -3,10 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"os"
 	"path"
-	"path/filepath"
-	"strings"
 
 	"github.com/pkg/sftp"
 	"github.com/spf13/cobra"
@@ -32,35 +29,10 @@ var deployCmd = &cobra.Command{
 		if dc.RemotePath == "" {
 			return fmt.Errorf("deploy.remote_path is required in deploy.yaml")
 		}
-		if dc.Port == 0 {
-			dc.Port = 22
-		}
 
-		keyPath := expandHome(dc.KeyPath)
-		keyData, err := os.ReadFile(keyPath)
+		client, err := sshConnect(dc)
 		if err != nil {
-			return fmt.Errorf("failed to read SSH key %s: %w", keyPath, err)
-		}
-
-		signer, err := ssh.ParsePrivateKey(keyData)
-		if err != nil {
-			return fmt.Errorf("failed to parse SSH key: %w", err)
-		}
-
-		sshConfig := &ssh.ClientConfig{
-			User: dc.User,
-			Auth: []ssh.AuthMethod{
-				ssh.PublicKeys(signer),
-			},
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		}
-
-		addr := fmt.Sprintf("%s:%d", dc.Host, dc.Port)
-		fmt.Printf("Connecting to %s@%s...\n", dc.User, addr)
-
-		client, err := ssh.Dial("tcp", addr, sshConfig)
-		if err != nil {
-			return fmt.Errorf("SSH connection failed: %w", err)
+			return err
 		}
 		defer client.Close()
 
@@ -84,6 +56,21 @@ var deployCmd = &cobra.Command{
 		if err := runRemoteCommand(client, fmt.Sprintf("sudo mkdir -p %s && sudo chown %s %s", remoteDir, dc.User, remoteDir)); err != nil {
 			return fmt.Errorf("failed to create remote directory %s: %w", remoteDir, err)
 		}
+
+		// Stop the service if running (required to replace the binary)
+		if dc.Service.Name != "" {
+			fmt.Printf("Stopping service %s before deploy...\n", dc.Service.Name)
+			_, _ = runRemoteCommandOutput(client, fmt.Sprintf("sudo systemctl stop %s 2>/dev/null", dc.Service.Name))
+		}
+
+		// Backup current binary before overwriting
+		backupPath := dc.RemotePath + ".bak"
+		fmt.Printf("Backing up current binary to %s...\n", backupPath)
+		// Ignore error — file may not exist on first deploy
+		_, _ = runRemoteCommandOutput(client, fmt.Sprintf("cp -f %s %s 2>/dev/null", dc.RemotePath, backupPath))
+
+		// Remove old binary so SFTP can create a fresh file (avoids "text file busy")
+		_, _ = runRemoteCommandOutput(client, fmt.Sprintf("rm -f %s", dc.RemotePath))
 
 		fmt.Printf("Uploading %s -> %s...\n", localPath, dc.RemotePath)
 		if err := uploadFile(client, localPath, dc.RemotePath); err != nil {
@@ -127,52 +114,16 @@ var deployCmd = &cobra.Command{
 	},
 }
 
-func runRemoteCommand(client *ssh.Client, command string) error {
-	session, err := client.NewSession()
+func newSFTPClient(client *ssh.Client) (*sftp.Client, error) {
+	c, err := sftp.NewClient(client)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("SFTP session failed: %w", err)
 	}
-	defer session.Close()
-
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-
-	fmt.Printf("Running: %s\n", command)
-	return session.Run(command)
+	return c, nil
 }
 
-func uploadFile(client *ssh.Client, localPath, remotePath string) error {
-	sftpClient, err := sftp.NewClient(client)
-	if err != nil {
-		return fmt.Errorf("SFTP session failed: %w", err)
-	}
-	defer sftpClient.Close()
-
-	local, err := os.Open(localPath)
-	if err != nil {
-		return fmt.Errorf("failed to open local file %s: %w", localPath, err)
-	}
-	defer local.Close()
-
-	remote, err := sftpClient.Create(remotePath)
-	if err != nil {
-		return fmt.Errorf("failed to create remote file %s: %w", remotePath, err)
-	}
-	defer remote.Close()
-
-	_, err = io.Copy(remote, local)
-	return err
-}
-
-func expandHome(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
-		return filepath.Join(home, path[2:])
-	}
-	return path
+func copyIO(dst io.Writer, src io.Reader) (int64, error) {
+	return io.Copy(dst, src)
 }
 
 func init() {
